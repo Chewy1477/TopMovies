@@ -11,19 +11,18 @@ import Foundation
 
 public final class MovieSerialization {
     
-    typealias dict = [String:AnyObject]
+    typealias dict = [String: AnyObject]
     
-    public enum MovieErrors: Error {
+    enum MovieErrors: Error {
         case noTitle
         case noRelease
         case noPrice
         case noImage
         case noStore
-        case noTrailer
     }
     
-    static func returnMovies(data: Data) throws -> [Movies] {
-        var arrMovies: [Movies] = []
+    static func movies(data: Data) throws -> [Movie] {
+        var arrMovies: [Movie] = []
 
         do {
             let json = try! JSONSerialization.jsonObject(with: data, options: []) as? dict
@@ -64,16 +63,10 @@ public final class MovieSerialization {
                     throw MovieErrors.noStore
                 }
                 
-                //Trailer Property
-                let trailer = (category["link"]![1] as! dict)
-                guard let href = trailer["attributes"]?["href"] as? String else {
-                    throw MovieErrors.noTrailer
-                }
-                
                 //Instance of a Movie
-                let createMovie = Movies(title: name, release: releaseDate, price: cost, image: picture!, trailerUrl: href, storeUrl: getHref)
+                let movie = Movie(title: name, release: releaseDate, price: cost, image: picture, storeUrl: getHref)
                 
-                arrMovies.append(createMovie)
+                arrMovies.append(movie)
             }
         }
         return arrMovies

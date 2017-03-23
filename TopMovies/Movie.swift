@@ -9,20 +9,18 @@
 import Foundation
 import UIKit
 
-struct Movies {
+struct Movie {
     let title: String
     let release: String
     let price: String
-    let image: UIImage
-    let trailerUrl: String
+    let image: UIImage?
     let storeUrl: String
     
-    init(title: String, release: String, price: String, image: UIImage, trailerUrl: String, storeUrl: String) {
+    init(title: String, release: String, price: String, image: UIImage?, storeUrl: String) {
         self.title = title
         self.release = release
         self.price = price
         self.image = image
-        self.trailerUrl = trailerUrl
         self.storeUrl = storeUrl
     }
     

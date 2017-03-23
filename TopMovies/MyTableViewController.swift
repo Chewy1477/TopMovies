@@ -9,92 +9,102 @@
 import UIKit
 import Alamofire
 
-class MyTableViewController: UITableViewController {
+class MyTableViewController: UIViewController {
     
     let urlStr = "https://itunes.apple.com/us/rss/topmovies/limit=25/json"
-    var arrayMov: [Movies] = []
+    var tableViewModel: MovieTableViewModel?
+    var movies: [Movie] = []
+    
+    fileprivate let topMoviesTable: UITableView = {
+        let view = UITableView()
+        view.register(MovieTableViewCell.self, forCellReuseIdentifier: MovieTableViewCell.description())
+        view.translatesAutoresizingMaskIntoConstraints = false
+        return view
+    }()
     
     override func viewDidLoad() {
         super.viewDidLoad()
         
+        self.title = "Top Movies!"
+        initialize()
         getJson(url: urlStr)
-        }
+    }
 
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
-        // Dispose of any resources that can be recreated.
+    func initialize() {
+        
+        view.addSubview(topMoviesTable)
+        topMoviesTable.delegate = self
+        topMoviesTable.dataSource = self
+        
+        view.addConstraint(NSLayoutConstraint(item: topMoviesTable, attribute: .bottom, relatedBy: .equal, toItem: view, attribute: .bottom, multiplier: 1, constant: 0))
+        view.addConstraint(NSLayoutConstraint(item: topMoviesTable, attribute: .top, relatedBy: .equal, toItem: view, attribute: .top, multiplier: 1, constant: 0))
+        view.addConstraint(NSLayoutConstraint(item: topMoviesTable, attribute: .left, relatedBy: .equal, toItem: view, attribute: .left, multiplier: 1, constant: 0))
+        view.addConstraint(NSLayoutConstraint(item: topMoviesTable, attribute: .right, relatedBy: .equal, toItem: view, attribute: .right, multiplier: 1, constant: 0))
+        
     }
     
     func getJson(url: String) {
-        Alamofire.request(url).responseJSON(completionHandler: {
-            response in
+        
+        Alamofire.request(url).responseJSON(completionHandler: { response in
+            guard let data = response.data else {
+                return
+            }
             
-            try! self.arrayMov = MovieSerialization.returnMovies(data: response.data!)
-            self.tableView.reloadData()
+            try? self.movies = MovieSerialization.movies(data: data)
+            
+            self.tableViewModel = self.movies.map({(parameter: Movie) -> MovieTableViewCellViewModel in
+                return MovieTableViewCellViewModel(withMovie: parameter)
+            })
+            
+            self.topMoviesTable.reloadData()
         })
     }
     
-    override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        return arrayMov.count
-    }
-    
-    override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "cell")
-        
-        //Populate Image
-        let imageView = cell?.viewWithTag(1) as! UIImageView
-        imageView.image = arrayMov[indexPath.row].image
-        
-        //Populate Price
-        let priceMovie = cell?.viewWithTag(4) as! UILabel
-        priceMovie.text = arrayMov[indexPath.row].price
-        
-        //Populate Name
-        let movieName = cell?.viewWithTag(2) as! UILabel
-        let title = arrayMov[indexPath.row].title
-        
-        if (title.characters.count > 25) {
-            let titleDisplay = title.getSubstring(long: title, x: 25)
-            movieName.text = "\(titleDisplay)..."
-        }
-            
-        else {
-            movieName.text = title
-        }
-        
-        //Populate Release Date
-        let releaseDate = cell?.viewWithTag(3) as! UILabel
-        let cutDate = arrayMov[indexPath.row].release
-        
-        let toDisplay = cutDate.getSubstring(long: cutDate, x: 10)
-        releaseDate.text = toDisplay
-        
-        cell?.accessoryType = UITableViewCellAccessoryType.disclosureIndicator
-        
-        return cell!
-    }
-    
-    override func prepare(for segue: UIStoryboardSegue, sender: Any?) {
-        let indexRow = self.tableView.indexPathForSelectedRow?.row
-        
-        let destination = segue.destination as! InfoViewController
-        let selected = arrayMov[indexRow!]
-        destination.segueImage = selected.image
-        destination.segueTitle = selected.title
-        destination.seguePrice = selected.price
-        destination.segueRelease = selected.release.getSubstring(long: selected.release, x: 10)
-        destination.segueURL = selected.trailerUrl
-        destination.segueStore = selected.storeUrl
-        print(selected.storeUrl)
-    }
 }
 
-extension String {
-    func getSubstring(long: String, x: Int) -> String{
-        let index = long.index(long.startIndex, offsetBy: x)
-        let newString = long.substring(to: index)
+extension MyTableViewController: UITableViewDelegate {
+    
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: MovieTableViewCell.description(), for: indexPath)
+        guard let vm = tableViewModel else {
+            return cell
+        }
+
+        (cell as? MovieTableViewCell)?.cellViewModel = vm[indexPath.row]
         
-        return newString
+        cell.backgroundColor = UIColor.white
+
+        return cell
     }
+
+}
+
+extension MyTableViewController: UITableViewDataSource {
+    
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+        
+        guard let vm = tableViewModel else {
+            return 0
+        }
+        return vm.count
+        
+    }
+    
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 170
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        
+        let infoViewController = InfoViewController()
+
+        guard let vm = tableViewModel else {
+            return
+        }
+        
+        infoViewController.viewModel = InfoViewModel(withMovie: vm[indexPath.row].theMovie)
+        navigationController?.pushViewController(infoViewController, animated: true)
+    }
+    
 }
 
